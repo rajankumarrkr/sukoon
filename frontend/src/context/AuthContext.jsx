@@ -31,7 +31,8 @@ export const AuthProvider = ({ children }) => {
     const fetchCurrentUser = async () => {
         try {
             const response = await axios.get(`${API_URL}/auth/me`);
-            setUser(response.data.user);
+            const userData = response.data.user;
+            setUser({ ...userData, id: userData._id });
         } catch (error) {
             console.error('Failed to fetch user:', error);
             logout();

@@ -1,18 +1,32 @@
 const Post = require('../models/Post');
-const User = require('../models/User');
+const User = require('../models/User'); // Fixed missing import
+const Notification = require('../models/Notification');
+const { sendNotification } = require('../utils/socket');
+const cloudinary = require('../utils/cloudinary');
+const fs = require('fs');
 
 // Create new post
 exports.createPost = async (req, res) => {
     try {
-        const { imageUrl, caption } = req.body;
+        const { caption } = req.body;
+        const file = req.file;
 
-        if (!imageUrl) {
-            return res.status(400).json({ message: 'Image URL is required' });
+        if (!file) {
+            return res.status(400).json({ message: 'Image file is required' });
         }
+
+        // Upload to Cloudinary
+        const result = await cloudinary.uploader.upload(file.path, {
+            folder: 'sukoon_posts',
+            transformation: [{ width: 1080, height: 1080, crop: 'limit' }]
+        });
+
+        // Remove file from local uploads folder
+        fs.unlinkSync(file.path);
 
         const post = new Post({
             userId: req.userId,
-            imageUrl,
+            imageUrl: result.secure_url,
             caption: caption || ''
         });
 
@@ -22,7 +36,11 @@ exports.createPost = async (req, res) => {
         res.status(201).json({ message: 'Post created successfully', post });
     } catch (error) {
         console.error('Create post error:', error);
-        res.status(500).json({ message: 'Server error' });
+        // Cleanup local file if error occurs after upload started
+        if (req.file && fs.existsSync(req.file.path)) {
+            fs.unlinkSync(req.file.path);
+        }
+        res.status(500).json({ message: 'Server error pulse check' });
     }
 };
 
@@ -92,6 +110,25 @@ exports.toggleLike = async (req, res) => {
 
         await post.save();
 
+        // Create notification for like
+        if (!isLiked && post.userId.toString() !== req.userId) {
+            const notification = new Notification({
+                recipient: post.userId,
+                sender: req.userId,
+                type: 'like',
+                post: post._id,
+                text: 'liked your post'
+            });
+            await notification.save();
+
+            const sender = await User.findById(req.userId).select('username');
+            sendNotification(post.userId, {
+                type: 'like',
+                message: `${sender.username} liked your post`,
+                postId: post._id
+            });
+        }
+
         res.json({
             message: isLiked ? 'Post unliked' : 'Post liked',
             isLiked: !isLiked,
@@ -125,6 +162,25 @@ exports.addComment = async (req, res) => {
 
         await post.save();
         await post.populate('comments.userId', 'username profilePic');
+
+        // Create notification for comment
+        if (post.userId.toString() !== req.userId) {
+            const notification = new Notification({
+                recipient: post.userId,
+                sender: req.userId,
+                type: 'comment',
+                post: post._id,
+                text: 'commented on your post'
+            });
+            await notification.save();
+
+            const sender = await User.findById(req.userId).select('username');
+            sendNotification(post.userId, {
+                type: 'comment',
+                message: `${sender.username} commented on your post`,
+                postId: post._id
+            });
+        }
 
         res.status(201).json({
             message: 'Comment added successfully',

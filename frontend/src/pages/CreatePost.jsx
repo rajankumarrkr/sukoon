@@ -2,36 +2,52 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { motion } from 'framer-motion';
-import { Upload, Image as ImageIcon } from 'lucide-react';
+import { Upload, Image as ImageIcon, Loader2 } from 'lucide-react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 
 const CreatePost = () => {
-    const [imageUrl, setImageUrl] = useState('');
+    const [file, setFile] = useState(null);
+    const [previewUrl, setPreviewUrl] = useState('');
     const [caption, setCaption] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const { API_URL } = useAuth();
     const navigate = useNavigate();
 
+    const handleFileChange = (e) => {
+        const selectedFile = e.target.files[0];
+        if (selectedFile) {
+            setFile(selectedFile);
+            setPreviewUrl(URL.createObjectURL(selectedFile));
+        }
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
 
-        if (!imageUrl.trim()) {
-            toast.error('Please provide an image URL');
+        if (!file) {
+            toast.error('Please select an image to post');
             return;
         }
 
         setIsLoading(true);
 
         try {
-            await axios.post(`${API_URL}/posts`, {
-                imageUrl: imageUrl.trim(),
-                caption: caption.trim()
+            const formData = new FormData();
+            formData.append('image', file);
+            formData.append('caption', caption.trim());
+
+            await axios.post(`${API_URL}/posts`, formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data'
+                }
             });
+
             toast.success('Post created successfully! 🎉');
             navigate('/');
         } catch (error) {
             toast.error(error.response?.data?.message || 'Failed to create post');
+            console.error('Create post error:', error);
         } finally {
             setIsLoading(false);
         }
@@ -52,40 +68,42 @@ const CreatePost = () => {
                 </div>
 
                 <form onSubmit={handleSubmit} className="space-y-6">
-                    {/* Image URL Input */}
+                    {/* File Input */}
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Image URL
+                            Select Image
                         </label>
                         <div className="relative">
-                            <ImageIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                             <input
-                                type="url"
-                                value={imageUrl}
-                                onChange={(e) => setImageUrl(e.target.value)}
-                                className="input-field pl-11"
-                                placeholder="https://example.com/image.jpg"
+                                type="file"
+                                accept="image/*"
+                                onChange={handleFileChange}
+                                className="hidden"
+                                id="fileInput"
                                 required
                             />
+                            <label
+                                htmlFor="fileInput"
+                                className="flex flex-col items-center justify-center w-full h-48 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors"
+                            >
+                                {previewUrl ? (
+                                    <img
+                                        src={previewUrl}
+                                        alt="Preview"
+                                        className="w-full h-full object-cover rounded-lg"
+                                    />
+                                ) : (
+                                    <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                                        <ImageIcon className="w-12 h-12 text-gray-400 mb-3" />
+                                        <p className="text-sm text-gray-500">
+                                            <span className="font-semibold">Click to upload</span> or drag and drop
+                                        </p>
+                                        <p className="text-xs text-gray-500">PNG, JPG or JPEG (Max 5MB)</p>
+                                    </div>
+                                )}
+                            </label>
                         </div>
-                        <p className="text-xs text-gray-500 mt-1">
-                            Enter a direct link to your image
-                        </p>
                     </div>
-
-                    {/* Image Preview */}
-                    {imageUrl && (
-                        <div className="rounded-lg overflow-hidden border border-gray-200">
-                            <img
-                                src={imageUrl}
-                                alt="Preview"
-                                className="w-full max-h-96 object-cover"
-                                onError={(e) => {
-                                    e.target.src = 'https://via.placeholder.com/400x300?text=Invalid+Image+URL';
-                                }}
-                            />
-                        </div>
-                    )}
 
                     {/* Caption */}
                     <div>
@@ -110,9 +128,10 @@ const CreatePost = () => {
                         <button
                             type="submit"
                             disabled={isLoading}
-                            className="btn-primary flex-1 disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="btn-primary flex-1 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
                         >
-                            {isLoading ? 'Creating...' : 'Create Post'}
+                            {isLoading && <Loader2 className="w-5 h-5 animate-spin" />}
+                            <span>{isLoading ? 'Creating...' : 'Create Post'}</span>
                         </button>
                         <button
                             type="button"

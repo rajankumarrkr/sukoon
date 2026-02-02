@@ -1,67 +1,59 @@
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Home, PlusSquare, User, LogOut, Heart } from 'lucide-react';
+import { Home, PlusSquare, User, LogOut, MessageCircle, Film, Search } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 const Navbar = () => {
-    const { user, logout } = useAuth();
+    const { logout, user } = useAuth();
     const navigate = useNavigate();
+    const location = useLocation();
 
-    const handleLogout = () => {
-        logout();
-        navigate('/login');
-    };
+    const isActive = (path) => location.pathname === path;
+
+    const navLinks = [
+        { to: '/', icon: Home, label: 'Home' },
+        { to: '/reels', icon: Film, label: 'Reels' },
+        { to: '/create', icon: PlusSquare, label: 'Create' },
+        { to: '/search', icon: Search, label: 'Search' },
+        { to: `/profile/${user?.id}`, icon: User, label: 'Profile' }
+    ];
 
     return (
         <motion.nav
-            initial={{ y: -100 }}
+            initial={{ y: 100 }}
             animate={{ y: 0 }}
-            className="sticky top-0 z-50 glassmorphism border-b border-gray-200"
+            className="fixed bottom-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-xl border-t border-gray-100 pb-safe shadow-2xl"
         >
-            <div className="max-w-6xl mx-auto px-4 py-3">
-                <div className="flex items-center justify-between">
-                    {/* Logo */}
-                    <Link to="/" className="flex items-center space-x-2">
-                        <Heart className="w-8 h-8 text-primary-600 fill-primary-600" />
-                        <span className="text-2xl font-bold bg-gradient-to-r from-primary-600 to-primary-500 bg-clip-text text-transparent">
-                            Sukoon
-                        </span>
-                    </Link>
-
-                    {/* Navigation */}
-                    <div className="flex items-center space-x-6">
+            <div className="max-w-xl mx-auto px-4 py-2">
+                <div className="flex justify-between items-center h-14">
+                    {navLinks.map(({ to, icon: Icon, label }) => (
                         <Link
-                            to="/"
-                            className="flex items-center space-x-2 text-gray-700 hover:text-primary-600 transition-colors"
+                            key={to}
+                            to={to}
+                            className={`relative flex flex-col items-center justify-center w-full py-1 transition-all duration-300 ${isActive(to)
+                                ? 'text-primary-600'
+                                : 'text-gray-400 hover:text-gray-600'
+                                }`}
                         >
-                            <Home className="w-6 h-6" />
-                            <span className="hidden sm:inline font-medium">Home</span>
-                        </Link>
+                            <motion.div
+                                whileTap={{ scale: 0.8 }}
+                                transition={{ type: 'spring', stiffness: 400, damping: 17 }}
+                            >
+                                <Icon
+                                    className={`w-7 h-7 ${isActive(to) ? 'fill-primary-50/50 stroke-[2.5px]' : 'stroke-2'}`}
+                                />
+                            </motion.div>
 
-                        <Link
-                            to="/create"
-                            className="flex items-center space-x-2 text-gray-700 hover:text-primary-600 transition-colors"
-                        >
-                            <PlusSquare className="w-6 h-6" />
-                            <span className="hidden sm:inline font-medium">Create</span>
+                            {isActive(to) && (
+                                <motion.div
+                                    layoutId="nav-dot"
+                                    className="absolute -bottom-1 w-1 h-1 bg-primary-600 rounded-full"
+                                    transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+                                />
+                            )}
                         </Link>
+                    ))}
 
-                        <Link
-                            to={`/profile/${user?.id}`}
-                            className="flex items-center space-x-2 text-gray-700 hover:text-primary-600 transition-colors"
-                        >
-                            <User className="w-6 h-6" />
-                            <span className="hidden sm:inline font-medium">Profile</span>
-                        </Link>
-
-                        <button
-                            onClick={handleLogout}
-                            className="flex items-center space-x-2 text-gray-700 hover:text-red-600 transition-colors"
-                        >
-                            <LogOut className="w-6 h-6" />
-                            <span className="hidden sm:inline font-medium">Logout</span>
-                        </button>
-                    </div>
                 </div>
             </div>
         </motion.nav>

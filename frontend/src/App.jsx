@@ -9,9 +9,13 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import Profile from './pages/Profile';
 import CreatePost from './pages/CreatePost';
+import Search from './pages/Search';
+import Chat from './pages/Chat';
+import Reels from './pages/Reels';
 
 // Components
 import Navbar from './components/Navbar';
+import Header from './components/Header';
 
 // Protected Route Component
 const ProtectedRoute = ({ children }) => {
@@ -19,13 +23,21 @@ const ProtectedRoute = ({ children }) => {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center min-screen">
         <Loader2 className="w-12 h-12 text-primary-600 animate-spin" />
       </div>
     );
   }
 
-  return user ? children : <Navigate to="/login" />;
+  return user ? (
+    <div className="flex flex-col min-h-screen pb-20">
+      <Header />
+      <main className="flex-1">
+        {children}
+      </main>
+      <Navbar />
+    </div>
+  ) : <Navigate to="/login" />;
 };
 
 // Public Route Component (redirect to home if already logged in)
@@ -97,10 +109,7 @@ function App() {
             path="/"
             element={
               <ProtectedRoute>
-                <>
-                  <Navbar />
-                  <Home />
-                </>
+                <Home />
               </ProtectedRoute>
             }
           />
@@ -108,10 +117,15 @@ function App() {
             path="/create"
             element={
               <ProtectedRoute>
-                <>
-                  <Navbar />
-                  <CreatePost />
-                </>
+                <CreatePost />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/search"
+            element={
+              <ProtectedRoute>
+                <Search />
               </ProtectedRoute>
             }
           />
@@ -119,10 +133,23 @@ function App() {
             path="/profile/:userId"
             element={
               <ProtectedRoute>
-                <>
-                  <Navbar />
-                  <Profile />
-                </>
+                <Profile />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/chat"
+            element={
+              <ProtectedRoute>
+                <Chat />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/reels"
+            element={
+              <ProtectedRoute>
+                <Reels />
               </ProtectedRoute>
             }
           />

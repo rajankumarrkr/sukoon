@@ -10,14 +10,22 @@
 
 @layer components {
   .glassmorphism {
-    @apply bg-white/80 backdrop-blur-lg border border-white/20 shadow-xl;
+    @apply backdrop-blur-md bg-white/70 border border-white/20 shadow-xl;
   }
-  
-  .btn-primary {
-    @apply bg-gradient-to-r from-primary-500 to-primary-600 text-white px-6 py-3 rounded-lg font-semibold hover:from-primary-600 hover:to-primary-700 transition-all duration-300 shadow-lg hover:shadow-xl;
+
+  .glass-card {
+    @apply backdrop-blur-lg bg-white/80 border border-white/30 rounded-2xl shadow-2xl;
   }
-  
+
+  .premium-gradient {
+    background: linear-gradient(135deg, #ef4444 0%, #ec4899 50%, #f43f5e 100%);
+  }
+
   .input-field {
-    @apply w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all duration-200;
+    @apply w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-primary-500 focus:ring-2 focus:ring-primary-200 outline-none transition-all bg-gray-50/50;
+  }
+
+  .btn-primary {
+    @apply flex-1 premium-gradient text-white font-bold py-3 px-6 rounded-xl shadow-lg hover:shadow-primary-200/50 hover:scale-[1.02] active:scale-[0.98] transition-all;
   }
 }

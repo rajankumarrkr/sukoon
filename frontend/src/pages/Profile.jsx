@@ -1,24 +1,34 @@
 import { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
-import { Loader2, UserPlus, UserMinus, Grid, Heart } from 'lucide-react';
-import { motion } from 'framer-motion';
+import {
+    Loader2, Grid, Heart, LogOut, Film, Play, Plus,
+    MoreVertical, ChevronDown, Menu, Share2, UserPlus,
+    Camera, AtSign, Settings
+} from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
+import EditProfileModal from '../components/EditProfileModal';
 
 const Profile = () => {
     const { userId } = useParams();
-    const { user: currentUser, API_URL } = useAuth();
+    const { user: currentUser, logout, API_URL } = useAuth();
     const [profile, setProfile] = useState(null);
     const [posts, setPosts] = useState([]);
+    const [reels, setReels] = useState([]);
     const [loading, setLoading] = useState(true);
     const [isFollowing, setIsFollowing] = useState(false);
+    const [activeTab, setActiveTab] = useState('posts');
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
     const isOwnProfile = currentUser?.id === userId;
 
     useEffect(() => {
+        window.scrollTo(0, 0);
         fetchProfile();
         fetchUserPosts();
+        fetchUserReels();
     }, [userId]);
 
     const fetchProfile = async () => {
@@ -42,6 +52,15 @@ const Profile = () => {
         }
     };
 
+    const fetchUserReels = async () => {
+        try {
+            const response = await axios.get(`${API_URL}/reels/user/${userId}`);
+            setReels(response.data.reels || []);
+        } catch (error) {
+            console.error('Failed to load reels:', error);
+        }
+    };
+
     const handleFollow = async () => {
         try {
             const response = await axios.post(`${API_URL}/users/follow/${userId}`);
@@ -53,122 +72,209 @@ const Profile = () => {
         }
     };
 
+    const handleShareProfile = () => {
+        const url = window.location.href;
+        navigator.clipboard.writeText(url);
+        toast.success('Profile link copied! 🔗');
+    };
+
     if (loading) {
         return (
-            <div className="flex items-center justify-center min-h-[60vh]">
-                <Loader2 className="w-12 h-12 text-primary-600 animate-spin" />
+            <div className="flex items-center justify-center min-h-screen bg-gray-50">
+                <Loader2 className="w-10 h-10 text-primary-600 animate-spin" />
             </div>
         );
     }
 
     return (
-        <div className="max-w-4xl mx-auto px-4 py-8">
-            {/* Profile Header */}
-            <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="bg-white rounded-xl shadow-lg p-8 mb-8"
-            >
-                <div className="flex flex-col md:flex-row items-center md:items-start space-y-4 md:space-y-0 md:space-x-8">
-                    {/* Profile Picture */}
-                    <img
-                        src={profile?.profilePic || 'https://via.placeholder.com/150'}
-                        alt={profile?.username}
-                        className="w-32 h-32 rounded-full object-cover border-4 border-primary-200"
-                    />
-
-                    {/* Profile Info */}
-                    <div className="flex-1 text-center md:text-left">
-                        <div className="flex flex-col md:flex-row items-center md:items-start space-y-4 md:space-y-0 md:space-x-4 mb-4">
-                            <h1 className="text-2xl font-bold text-gray-800">{profile?.username}</h1>
-                            {!isOwnProfile && (
-                                <button
-                                    onClick={handleFollow}
-                                    className={`flex items-center space-x-2 px-6 py-2 rounded-lg font-semibold transition-all ${isFollowing
-                                            ? 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                                            : 'bg-primary-600 text-white hover:bg-primary-700'
-                                        }`}
-                                >
-                                    {isFollowing ? (
-                                        <>
-                                            <UserMinus className="w-4 h-4" />
-                                            <span>Unfollow</span>
-                                        </>
-                                    ) : (
-                                        <>
-                                            <UserPlus className="w-4 h-4" />
-                                            <span>Follow</span>
-                                        </>
-                                    )}
-                                </button>
-                            )}
-                        </div>
-
-                        {/* Stats */}
-                        <div className="flex justify-center md:justify-start space-x-8 mb-4">
-                            <div className="text-center">
-                                <p className="font-bold text-xl text-gray-800">{posts.length}</p>
-                                <p className="text-gray-600 text-sm">Posts</p>
-                            </div>
-                            <div className="text-center">
-                                <p className="font-bold text-xl text-gray-800">
-                                    {profile?.followers?.length || 0}
-                                </p>
-                                <p className="text-gray-600 text-sm">Followers</p>
-                            </div>
-                            <div className="text-center">
-                                <p className="font-bold text-xl text-gray-800">
-                                    {profile?.following?.length || 0}
-                                </p>
-                                <p className="text-gray-600 text-sm">Following</p>
-                            </div>
-                        </div>
-
-                        {/* Bio */}
-                        <div>
-                            <p className="font-semibold text-gray-800">{profile?.name}</p>
-                            {profile?.bio && <p className="text-gray-600 mt-1">{profile.bio}</p>}
-                        </div>
-                    </div>
-                </div>
-            </motion.div>
-
-            {/* Posts Grid */}
-            <div className="mb-6">
-                <div className="flex items-center space-x-2 mb-4">
-                    <Grid className="w-5 h-5 text-gray-600" />
-                    <h2 className="text-lg font-semibold text-gray-800">Posts</h2>
+        <div className="min-h-screen bg-gray-50 text-gray-900 pb-20">
+            {/* Top Navigation Header */}
+            <div className="sticky top-0 z-30 bg-white/80 backdrop-blur-md px-4 py-3 flex items-center justify-between border-b border-gray-100">
+                <div className="flex items-center space-x-4">
+                    <Plus className="w-7 h-7 text-gray-700" />
                 </div>
 
-                {posts.length === 0 ? (
-                    <div className="text-center py-12 bg-white rounded-xl shadow">
-                        <p className="text-gray-600">No posts yet</p>
-                    </div>
-                ) : (
-                    <div className="grid grid-cols-3 gap-1 md:gap-4">
-                        {posts.map((post) => (
-                            <motion.div
-                                key={post._id}
-                                initial={{ opacity: 0, scale: 0.9 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                className="relative aspect-square group cursor-pointer overflow-hidden rounded-lg"
-                            >
+                <button className="flex items-center space-x-1">
+                    <span className="font-bold text-lg">{profile?.username}</span>
+                    <ChevronDown className="w-4 h-4" />
+                    {isOwnProfile && <div className="w-2 h-2 bg-red-500 rounded-full ml-1" />}
+                </button>
+
+                <div className="flex items-center space-x-5">
+                    <AtSign className="w-6 h-6" />
+                    <Menu className="w-7 h-7" />
+                </div>
+            </div>
+
+            <div className="px-4 py-4 max-w-2xl mx-auto">
+                {/* Profile Header */}
+                <div className="flex items-start mb-6">
+                    {/* Left: Avatar with Vibe */}
+                    <div className="relative mr-8">
+                        {isOwnProfile && (
+                            <div className="absolute -top-6 -left-2 bg-white px-2 py-1 rounded-xl text-[10px] font-bold text-gray-400 shadow-sm border border-gray-100 flex items-center">
+                                Today's vibe...
+                            </div>
+                        )}
+                        <div className="w-24 h-24 md:w-28 md:h-28 rounded-full">
+                            <div className="w-full h-full rounded-full overflow-hidden bg-white shadow-inner">
                                 <img
-                                    src={post.imageUrl}
-                                    alt="Post"
+                                    src={profile?.profilePic || 'https://via.placeholder.com/150'}
+                                    alt={profile?.username}
                                     className="w-full h-full object-cover"
                                 />
-                                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center space-x-6 text-white">
-                                    <div className="flex items-center space-x-2">
-                                        <Heart className="w-6 h-6 fill-white" />
-                                        <span className="font-semibold">{post.likes?.length || 0}</span>
-                                    </div>
-                                </div>
-                            </motion.div>
-                        ))}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Right: Stats */}
+                    <div className="flex-1 flex justify-around mt-4">
+                        <div className="text-center">
+                            <div className="font-bold text-lg">{posts.length}</div>
+                            <div className="text-sm text-gray-500">posts</div>
+                        </div>
+                        <div className="text-center">
+                            <div className="font-bold text-lg">{profile?.followers?.length || 0}</div>
+                            <div className="text-sm text-gray-500">followers</div>
+                        </div>
+                        <div className="text-center">
+                            <div className="font-bold text-lg">{profile?.following?.length || 0}</div>
+                            <div className="text-sm text-gray-500">following</div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Name & Bio */}
+                <div className="mb-6 px-1">
+                    <h2 className="font-bold text-base mb-0.5">{profile?.name}</h2>
+                    <p className="text-sm text-gray-700 leading-snug">
+                        {profile?.bio || 'Add a bio... ✨'}
+                    </p>
+                </div>
+
+                {/* Dashboard */}
+                {isOwnProfile && (
+                    <div className="bg-white rounded-xl p-4 mb-6 shadow-sm border border-gray-100">
+                        <div>
+                            <h3 className="text-sm font-bold text-gray-800">Professional dashboard</h3>
+                            <p className="text-xs text-gray-400 mt-1 font-medium">219 accounts reached in the last 30 days.</p>
+                        </div>
                     </div>
                 )}
+
+                {/* Action Buttons */}
+                <div className="flex space-x-2 mb-8">
+                    {isOwnProfile ? (
+                        <>
+                            <button
+                                onClick={() => setIsEditModalOpen(true)}
+                                className="flex-1 bg-gray-100 hover:bg-gray-200 py-2 rounded-lg text-sm font-bold text-gray-800 transition-colors"
+                            >
+                                Edit profile
+                            </button>
+                            <button
+                                onClick={handleShareProfile}
+                                className="flex-1 bg-gray-100 hover:bg-gray-200 py-2 rounded-lg text-sm font-bold text-gray-800 transition-colors"
+                            >
+                                Share profile
+                            </button>
+                            <button className="bg-gray-100 p-2 rounded-lg">
+                                <UserPlus className="w-5 h-5 text-gray-700" />
+                            </button>
+                        </>
+                    ) : (
+                        <>
+                            <button
+                                onClick={handleFollow}
+                                className={`flex-1 py-2 rounded-lg text-sm font-bold transition-all ${isFollowing
+                                    ? 'bg-gray-200 text-gray-800'
+                                    : 'bg-primary-600 text-white'
+                                    }`}
+                            >
+                                {isFollowing ? 'Following' : 'Follow'}
+                            </button>
+                            <button className="flex-1 bg-gray-100 py-2 rounded-lg text-sm font-bold text-gray-800">
+                                Message
+                            </button>
+                            <button className="bg-gray-100 p-2 rounded-lg">
+                                <UserPlus className="w-5 h-5 text-gray-700" />
+                            </button>
+                        </>
+                    )}
+                </div>
+
+                {/* Tabs & Content */}
+                <div className="flex border-t border-gray-100 mb-0.5">
+                    <button
+                        onClick={() => setActiveTab('posts')}
+                        className={`flex-1 flex justify-center py-4 border-b-2 transition-all ${activeTab === 'posts' ? 'border-primary-600 text-primary-600' : 'border-transparent text-gray-400'
+                            }`}
+                    >
+                        <Grid className="w-7 h-7" />
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('reels')}
+                        className={`flex-1 flex justify-center py-4 border-b-2 transition-all ${activeTab === 'reels' ? 'border-primary-600 text-primary-600' : 'border-transparent text-gray-400'
+                            }`}
+                    >
+                        <Film className="w-7 h-7" />
+                    </button>
+                </div>
+
+                <div className="grid grid-cols-3 gap-[2px]">
+                    {activeTab === 'posts' ? (
+                        posts.map((post) => (
+                            <div key={post._id} className="aspect-square bg-white overflow-hidden relative group">
+                                <img
+                                    src={post.imageUrl}
+                                    className="w-full h-full object-cover transition-transform"
+                                />
+                            </div>
+                        ))
+                    ) : (
+                        reels.map((reel) => (
+                            <Link to="/reels" key={reel._id} className="aspect-[9/16] bg-black overflow-hidden relative group flex items-center justify-center">
+                                <video src={reel.videoUrl} className="w-full h-full object-cover" />
+                                <div className="absolute inset-0 bg-black/10 transition-colors" />
+                                <div className="absolute bottom-2 left-2 flex items-center text-white text-[10px] font-bold drop-shadow-md">
+                                    <Play className="w-3 h-3 mr-1 fill-white" />
+                                    {reel.views?.length || 0}
+                                </div>
+                            </Link>
+                        ))
+                    )}
+                </div>
             </div>
+
+            {/* Account Logout */}
+            {isOwnProfile && (
+                <div className="px-4 py-8 max-w-2xl mx-auto">
+                    <button
+                        onClick={logout}
+                        className="w-full flex items-center p-4 bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all"
+                    >
+                        <div className="flex items-center space-x-3 text-red-500 font-bold">
+                            <LogOut className="w-5 h-5" />
+                            <span>Logout from Sukoon</span>
+                        </div>
+                    </button>
+                </div>
+            )}
+
+            {/* Edit Modal */}
+            <AnimatePresence>
+                {isEditModalOpen && (
+                    <EditProfileModal
+                        profile={profile}
+                        onClose={() => setIsEditModalOpen(false)}
+                        onUpdate={(updatedUser) => {
+                            setProfile(updatedUser);
+                            setIsEditModalOpen(false);
+                        }}
+                        API_URL={API_URL}
+                    />
+                )}
+            </AnimatePresence>
         </div>
     );
 };

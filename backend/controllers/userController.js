@@ -1,4 +1,6 @@
 const User = require('../models/User');
+const Notification = require('../models/Notification');
+const { sendNotification } = require('../utils/socket');
 
 // Get user profile by ID
 exports.getUserProfile = async (req, res) => {
@@ -19,10 +21,25 @@ exports.getUserProfile = async (req, res) => {
     }
 };
 
+const cloudinary = require('../utils/cloudinary');
+const fs = require('fs');
+
 // Update user profile
 exports.updateProfile = async (req, res) => {
     try {
-        const { name, bio, profilePic } = req.body;
+        const { name, bio } = req.body;
+        let profilePic = req.body.profilePic;
+
+        if (req.file) {
+            const result = await cloudinary.uploader.upload(req.file.path, {
+                folder: 'sukoon_profiles',
+                width: 300,
+                height: 300,
+                crop: 'fill'
+            });
+            profilePic = result.secure_url;
+            fs.unlinkSync(req.file.path);
+        }
 
         const user = await User.findByIdAndUpdate(
             req.userId,
@@ -68,6 +85,21 @@ exports.toggleFollow = async (req, res) => {
             // Follow
             currentUser.following.push(targetUserId);
             targetUser.followers.push(currentUserId);
+
+            // Create notification for follow
+            const notification = new Notification({
+                recipient: targetUserId,
+                sender: currentUserId,
+                type: 'follow',
+                text: 'started following you'
+            });
+            await notification.save();
+
+            sendNotification(targetUserId, {
+                type: 'follow',
+                message: `${currentUser.username} started following you`,
+                senderId: currentUserId
+            });
         }
 
         await currentUser.save();
@@ -79,6 +111,29 @@ exports.toggleFollow = async (req, res) => {
         });
     } catch (error) {
         console.error('Follow/Unfollow error:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+
+// Search users
+exports.searchUsers = async (req, res) => {
+    try {
+        const { query } = req.query;
+        if (!query) {
+            return res.status(400).json({ message: 'Search query is required' });
+        }
+
+        const users = await User.find({
+            $or: [
+                { username: { $regex: query, $options: 'i' } },
+                { name: { $regex: query, $options: 'i' } }
+            ],
+            _id: { $ne: req.userId } // Exclude current user from search results
+        }).select('username name profilePic bio');
+
+        res.json({ users });
+    } catch (error) {
+        console.error('Search users error:', error);
         res.status(500).json({ message: 'Server error' });
     }
 };
