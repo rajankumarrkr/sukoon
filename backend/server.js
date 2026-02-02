@@ -19,6 +19,11 @@ app.use('/api/chat', require('./routes/chat'));
 app.use('/api/stories', require('./routes/stories'));
 app.use('/api/reels', require('./routes/reels'));
 
+// Basic root route
+app.get('/', (req, res) => {
+    res.send('🕊️ Sukoon API is flying! Use /api/health to check status.');
+});
+
 // Health check
 app.get('/api/health', (req, res) => {
     res.json({ status: 'OK', message: 'Sukoon API is running' });
