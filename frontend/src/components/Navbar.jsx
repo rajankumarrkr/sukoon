@@ -15,7 +15,6 @@ const Navbar = () => {
         { to: '/', icon: Home, label: 'Home' },
         { to: '/search', icon: Search, label: 'Search' },
         { to: '/create', icon: PlusSquare, label: 'Create' },
-        { to: '/chat', icon: MessageCircle, label: 'Chat', badge: unreadMessagesCount },
         { to: '/reels', icon: Film, label: 'Reels' },
         { to: `/profile/${user?.id}`, icon: User, label: 'Profile' }
     ];
