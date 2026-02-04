@@ -94,12 +94,9 @@ exports.toggleFollow = async (req, res) => {
                 text: 'started following you'
             });
             await notification.save();
+            await notification.populate('sender', 'username profilePic');
 
-            sendNotification(targetUserId, {
-                type: 'follow',
-                message: `${currentUser.username} started following you`,
-                senderId: currentUserId
-            });
+            sendNotification(targetUserId, notification);
         }
 
         await currentUser.save();

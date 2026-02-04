@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
 import {
@@ -13,6 +13,7 @@ import EditProfileModal from '../components/EditProfileModal';
 
 const Profile = () => {
     const { userId } = useParams();
+    const navigate = useNavigate();
     const { user: currentUser, logout, API_URL } = useAuth();
     const [profile, setProfile] = useState(null);
     const [posts, setPosts] = useState([]);
@@ -193,7 +194,10 @@ const Profile = () => {
                             >
                                 {isFollowing ? 'Following' : 'Follow'}
                             </button>
-                            <button className="flex-1 bg-gray-100 py-2 rounded-lg text-sm font-bold text-gray-800">
+                            <button
+                                onClick={() => navigate('/chat', { state: { selectedUser: profile } })}
+                                className="flex-1 bg-gray-100 py-2 rounded-lg text-sm font-bold text-gray-800"
+                            >
                                 Message
                             </button>
                             <button className="bg-gray-100 p-2 rounded-lg">

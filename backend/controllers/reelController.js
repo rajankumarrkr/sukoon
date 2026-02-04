@@ -1,5 +1,7 @@
 const Reel = require('../models/Reel');
 const User = require('../models/User');
+const Notification = require('../models/Notification');
+const { sendNotification } = require('../utils/socket');
 const cloudinary = require('../utils/cloudinary');
 const fs = require('fs');
 
@@ -65,6 +67,21 @@ exports.toggleLikeReel = async (req, res) => {
         }
 
         await reel.save();
+
+        // Create notification for like
+        if (!isLiked && reel.userId.toString() !== req.userId) {
+            const notification = new Notification({
+                recipient: reel.userId,
+                sender: req.userId,
+                type: 'like',
+                text: 'liked your reel'
+            });
+            await notification.save();
+            await notification.populate('sender', 'username profilePic');
+
+            sendNotification(reel.userId, notification);
+        }
+
         res.json({ isLiked: !isLiked, likesCount: reel.likes.length });
     } catch (error) {
         res.status(500).json({ message: 'Server error' });

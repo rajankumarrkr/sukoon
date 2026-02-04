@@ -1,13 +1,15 @@
 import { useState, useEffect, useRef } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
-import { Send, User as UserIcon, Loader2, ChevronLeft } from 'lucide-react';
+import { Send, User as UserIcon, Loader2, ChevronLeft, Film, MessageCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const Chat = () => {
     const { user: currentUser, API_URL } = useAuth();
     const socket = useSocket();
+    const location = useLocation();
     const [conversations, setConversations] = useState([]);
     const [activeConversation, setActiveConversation] = useState(null);
     const [messages, setMessages] = useState([]);
@@ -17,12 +19,41 @@ const Chat = () => {
     const messagesEndRef = useRef(null);
 
     useEffect(() => {
-        fetchConversations();
-    }, []);
+        const initChat = async () => {
+            const fetchedConvs = await fetchConversations();
+
+            const selectedUser = location.state?.selectedUser;
+            if (selectedUser && fetchedConvs) {
+                const existingConv = fetchedConvs.find(conv =>
+                    conv.participants.some(p => p._id === selectedUser._id)
+                );
+
+                if (existingConv) {
+                    setActiveConversation(existingConv);
+                } else {
+                    const tempConv = {
+                        _id: 'temp-' + Date.now(),
+                        participants: [
+                            { _id: currentUser.id, username: currentUser.username },
+                            { _id: selectedUser._id, username: selectedUser.username, name: selectedUser.name, profilePic: selectedUser.profilePic }
+                        ],
+                        lastMessage: null,
+                        isTemp: true
+                    };
+                    setConversations(prev => [tempConv, ...prev]);
+                    setActiveConversation(tempConv);
+                }
+                setIsMobileView(true);
+            }
+        };
+        initChat();
+    }, [location.state]);
 
     useEffect(() => {
-        if (activeConversation) {
+        if (activeConversation && !activeConversation.isTemp) {
             fetchMessages(activeConversation._id);
+        } else {
+            setMessages([]);
         }
     }, [activeConversation]);
 
@@ -50,6 +81,7 @@ const Chat = () => {
         try {
             const response = await axios.get(`${API_URL}/chat/conversations`);
             setConversations(response.data.conversations);
+            return response.data.conversations;
         } catch (error) {
             console.error('Fetch conversations error:', error);
         }
@@ -80,15 +112,24 @@ const Chat = () => {
             });
 
             const sentMessage = response.data.message;
+            const conversationId = response.data.conversationId;
+
             setMessages(prev => [...prev, sentMessage]);
             setNewMessage('');
+
+            // If it was a temporary conversation, refresh it to get a real ID
+            if (activeConversation.isTemp) {
+                const refreshedConvs = await fetchConversations();
+                const realConv = refreshedConvs.find(c => c._id === conversationId);
+                if (realConv) setActiveConversation(realConv);
+            }
 
             socket?.emit('send_message', {
                 recipientId: recipient._id,
                 message: sentMessage
             });
 
-            fetchConversations();
+            if (!activeConversation.isTemp) fetchConversations();
         } catch (error) {
             console.error('Send message error:', error);
         }
@@ -163,10 +204,48 @@ const Chat = () => {
                                     >
                                         <div
                                             className={`max-w-[70%] px-4 py-2 rounded-2xl ${msg.sender === currentUser.id
-                                                    ? 'bg-primary-600 text-white rounded-tr-none'
-                                                    : 'bg-white text-gray-800 shadow-sm rounded-tl-none'
+                                                ? 'bg-primary-600 text-white rounded-tr-none'
+                                                : 'bg-white text-gray-800 shadow-sm rounded-tl-none'
                                                 }`}
                                         >
+                                            {/* Shared Post Preview */}
+                                            {msg.postId && (
+                                                <Link to={`/`} className="block mb-2 overflow-hidden rounded-lg bg-black/5">
+                                                    <img
+                                                        src={msg.postId.imageUrl}
+                                                        alt="Post"
+                                                        className="w-full aspect-square object-cover hover:scale-105 transition-transform"
+                                                    />
+                                                    <div className="p-2 text-xs">
+                                                        <p className={`font-bold truncate ${msg.sender === currentUser.id ? 'text-white' : 'text-gray-800'}`}>
+                                                            Post by @{msg.postId.userId?.username || 'user'}
+                                                        </p>
+                                                    </div>
+                                                </Link>
+                                            )}
+
+                                            {/* Shared Reel Preview */}
+                                            {msg.reelId && (
+                                                <Link to={`/reels`} className="block mb-2 overflow-hidden rounded-lg bg-black/10 relative">
+                                                    <div className="aspect-[9/16] bg-black flex items-center justify-center">
+                                                        <video
+                                                            src={msg.reelId.videoUrl}
+                                                            className="h-full w-full object-cover opacity-80"
+                                                        />
+                                                        <div className="absolute inset-0 flex items-center justify-center">
+                                                            <div className="p-3 bg-white/20 backdrop-blur-md rounded-full">
+                                                                <Film className="w-6 h-6 text-white" />
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div className="p-2 text-xs bg-black/20">
+                                                        <p className="font-bold text-white truncate">
+                                                            Reel by @{msg.reelId.userId?.username || 'user'}
+                                                        </p>
+                                                    </div>
+                                                </Link>
+                                            )}
+
                                             <p>{msg.text}</p>
                                             <p className={`text-[10px] mt-1 ${msg.sender === currentUser.id ? 'text-primary-100' : 'text-gray-400'}`}>
                                                 {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}

@@ -125,13 +125,9 @@ exports.toggleLike = async (req, res) => {
                 text: 'liked your post'
             });
             await notification.save();
+            await notification.populate('sender', 'username profilePic');
 
-            const sender = await User.findById(req.userId).select('username');
-            sendNotification(post.userId, {
-                type: 'like',
-                message: `${sender.username} liked your post`,
-                postId: post._id
-            });
+            sendNotification(post.userId, notification);
         }
 
         res.json({
@@ -178,13 +174,9 @@ exports.addComment = async (req, res) => {
                 text: 'commented on your post'
             });
             await notification.save();
+            await notification.populate('sender', 'username profilePic');
 
-            const sender = await User.findById(req.userId).select('username');
-            sendNotification(post.userId, {
-                type: 'comment',
-                message: `${sender.username} commented on your post`,
-                postId: post._id
-            });
+            sendNotification(post.userId, notification);
         }
 
         res.status(201).json({

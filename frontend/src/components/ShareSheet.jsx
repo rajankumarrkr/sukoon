@@ -40,7 +40,9 @@ const ShareSheet = ({ item, type, onClose }) => {
             const messageText = `Check out this ${type}: ${shareUrl}`;
             const response = await axios.post(`${API_URL}/chat/send`, {
                 recipientId: friendId,
-                text: messageText
+                text: messageText,
+                postId: type === 'post' ? item._id : undefined,
+                reelId: type === 'reel' ? item._id : undefined
             });
 
             socket?.emit('send_message', {

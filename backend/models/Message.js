@@ -13,7 +13,17 @@ const messageSchema = new mongoose.Schema({
     },
     text: {
         type: String,
-        required: true
+        required: function () {
+            return !this.postId && !this.reelId;
+        }
+    },
+    postId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Post'
+    },
+    reelId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Reel'
     },
     read: {
         type: Boolean,
