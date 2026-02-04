@@ -1,42 +1,14 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useNotifications } from '../context/NotificationContext';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Bell, MessageCircle, User } from 'lucide-react';
-import axios from 'axios';
+import { Bell, MessageCircle } from 'lucide-react';
 
 const Header = () => {
-    const { user, API_URL } = useAuth();
-    const [notifications, setNotifications] = useState([]);
+    const { user } = useAuth();
+    const { notifications, unreadCount, unreadMessagesCount, markAllAsRead } = useNotifications();
     const [showNotifications, setShowNotifications] = useState(false);
-    const [unreadCount, setUnreadCount] = useState(0);
-
-    useEffect(() => {
-        if (user) {
-            fetchNotifications();
-        }
-    }, [user]);
-
-    const fetchNotifications = async () => {
-        try {
-            const response = await axios.get(`${API_URL}/notifications`);
-            setNotifications(response.data.notifications);
-            setUnreadCount(response.data.notifications.filter(n => !n.read).length);
-        } catch (error) {
-            console.error('Fetch notifications error:', error);
-        }
-    };
-
-    const handleMarkRead = async () => {
-        if (unreadCount === 0) return;
-        try {
-            await axios.put(`${API_URL}/notifications/mark-read`);
-            setUnreadCount(0);
-            fetchNotifications();
-        } catch (error) {
-            console.error('Mark read error:', error);
-        }
-    };
 
     if (!user) return null;
 
@@ -60,7 +32,7 @@ const Header = () => {
                         whileTap={{ scale: 0.9 }}
                         onClick={() => {
                             setShowNotifications(!showNotifications);
-                            if (!showNotifications) handleMarkRead();
+                            if (!showNotifications) markAllAsRead();
                         }}
                         className="p-2 text-gray-600 hover:text-primary-600 transition-colors relative"
                     >
@@ -112,13 +84,22 @@ const Header = () => {
                     </AnimatePresence>
                 </div>
 
-                <Link to="/chat">
+                <Link to="/chat" className="relative group">
                     <motion.button
                         whileHover={{ scale: 1.1 }}
                         whileTap={{ scale: 0.9 }}
-                        className="p-2 text-gray-600 hover:text-primary-600 transition-colors"
+                        className="p-2 text-gray-600 hover:text-primary-600 transition-colors relative"
                     >
                         <MessageCircle className="w-6 h-6" />
+                        {unreadMessagesCount > 0 && (
+                            <motion.span
+                                initial={{ scale: 0 }}
+                                animate={{ scale: 1 }}
+                                className="absolute top-1 right-1 w-4 h-4 bg-primary-500 text-white text-[10px] flex items-center justify-center rounded-full border-2 border-white font-bold"
+                            >
+                                {unreadMessagesCount}
+                            </motion.span>
+                        )}
                     </motion.button>
                 </Link>
             </div>

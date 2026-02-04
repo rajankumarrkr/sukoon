@@ -29,16 +29,16 @@ const Home = () => {
 
     if (loading) {
         return (
-            <div className="max-w-2xl mx-auto px-4 py-8 space-y-8">
+            <div className="max-w-2xl mx-auto px-0 md:px-4 py-8 space-y-8">
                 {[1, 2, 3].map((i) => (
-                    <div key={i} className="animate-pulse bg-white rounded-xl shadow-lg overflow-hidden h-[400px]" />
+                    <div key={i} className="animate-pulse bg-white md:rounded-xl shadow-lg overflow-hidden h-[400px]" />
                 ))}
             </div>
         );
     }
 
     return (
-        <div className="max-w-2xl mx-auto px-4 py-6">
+        <div className="max-w-2xl mx-auto px-0 md:px-4 py-6">
             <Stories onStoryClick={(group) => setSelectedStoryGroup(group)} />
 
             <div className="space-y-6">

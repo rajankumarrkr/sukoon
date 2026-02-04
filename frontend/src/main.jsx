@@ -4,6 +4,7 @@ import './index.css'
 import App from './App.jsx'
 import { AuthProvider } from './context/AuthContext'
 import { SocketProvider } from './context/SocketContext'
+import { NotificationProvider } from './context/NotificationContext'
 import { registerSW } from 'virtual:pwa-register'
 
 // Register PWA service worker
@@ -13,7 +14,9 @@ createRoot(document.getElementById('root')).render(
   <StrictMode>
     <AuthProvider>
       <SocketProvider>
-        <App />
+        <NotificationProvider>
+          <App />
+        </NotificationProvider>
       </SocketProvider>
     </AuthProvider>
   </StrictMode>,

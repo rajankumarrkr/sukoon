@@ -46,7 +46,7 @@ const PostCard = ({ post, onLike, onComment }) => {
         <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-white rounded-xl shadow-lg overflow-hidden mb-6"
+            className="bg-white md:rounded-xl md:shadow-lg overflow-hidden mb-4 md:mb-6 border-b border-gray-100 md:border-none"
         >
             {/* Post Header */}
             <div className="flex items-center justify-between p-4">

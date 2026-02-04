@@ -49,7 +49,7 @@ const Stories = ({ onStoryClick }) => {
 
     if (loading && stories.length === 0) {
         return (
-            <div className="flex space-x-4 overflow-x-auto pb-4 scrollbar-hide">
+            <div className="flex space-x-4 overflow-x-auto pb-4 scrollbar-hide px-4 py-2 md:px-0">
                 {[1, 2, 3, 4, 5].map(i => (
                     <div key={i} className="flex-shrink-0 w-16 h-16 rounded-full bg-gray-100 animate-pulse" />
                 ))}
@@ -58,7 +58,7 @@ const Stories = ({ onStoryClick }) => {
     }
 
     return (
-        <div className="flex space-x-4 overflow-x-auto pb-4 scrollbar-hide mb-6 p-2">
+        <div className="flex space-x-4 overflow-x-auto pb-4 scrollbar-hide mb-6 px-4 py-2 md:px-0">
             {/* Add Story */}
             <div className="flex flex-col items-center space-y-1 flex-shrink-0">
                 <label className="relative cursor-pointer group">
