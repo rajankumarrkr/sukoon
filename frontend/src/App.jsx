@@ -12,6 +12,7 @@ import CreatePost from './pages/CreatePost';
 import Search from './pages/Search';
 import Chat from './pages/Chat';
 import Reels from './pages/Reels';
+import CreateReel from './pages/CreateReel';
 
 // Components
 import Navbar from './components/Navbar';
@@ -150,6 +151,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <Reels />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/create-reel"
+            element={
+              <ProtectedRoute>
+                <CreateReel />
               </ProtectedRoute>
             }
           />

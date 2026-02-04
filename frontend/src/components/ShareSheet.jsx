@@ -6,7 +6,7 @@ import { X, Send, Search, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 
-const ShareSheet = ({ reel, onClose }) => {
+const ShareSheet = ({ item, type, onClose }) => {
     const { user: currentUser, API_URL } = useAuth();
     const socket = useSocket();
     const [friends, setFriends] = useState([]);
@@ -33,7 +33,11 @@ const ShareSheet = ({ reel, onClose }) => {
     const handleShare = async (friendId) => {
         setSendingId(friendId);
         try {
-            const messageText = `Check out this reel: ${window.location.origin}/reels?id=${reel._id}`;
+            const shareUrl = type === 'reel'
+                ? `${window.location.origin}/reels?id=${item._id}`
+                : `${window.location.origin}/post/${item._id}`;
+
+            const messageText = `Check out this ${type}: ${shareUrl}`;
             const response = await axios.post(`${API_URL}/chat/send`, {
                 recipientId: friendId,
                 text: messageText
@@ -44,7 +48,7 @@ const ShareSheet = ({ reel, onClose }) => {
                 message: response.data.message
             });
 
-            toast.success('Shared to friend! ✨');
+            toast.success(`Shared ${type} to friend! ✨`);
         } catch (error) {
             toast.error('Failed to share');
         } finally {
@@ -77,7 +81,7 @@ const ShareSheet = ({ reel, onClose }) => {
                 <div className="p-6 border-b border-gray-100 flex items-center justify-between">
                     <div>
                         <h3 className="text-xl font-bold text-gray-800">Share</h3>
-                        <p className="text-xs text-gray-400 mt-1">Send this reel to your friends</p>
+                        <p className="text-xs text-gray-400 mt-1">Send this {type} to your friends</p>
                     </div>
                     <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
                         <X className="w-6 h-6 text-gray-400" />

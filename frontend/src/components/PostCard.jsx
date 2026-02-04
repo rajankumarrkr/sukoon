@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Heart, MessageCircle, Bookmark, MoreVertical } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { Heart, MessageCircle, Bookmark, MoreVertical, Send } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
+import ShareSheet from './ShareSheet';
 
 const PostCard = ({ post, onLike, onComment }) => {
     const { user, API_URL } = useAuth();
@@ -12,6 +13,7 @@ const PostCard = ({ post, onLike, onComment }) => {
     const [commentText, setCommentText] = useState('');
     const [isLiked, setIsLiked] = useState(post.likes?.includes(user?.id) || false);
     const [likesCount, setLikesCount] = useState(post.likes?.length || 0);
+    const [showShareSheet, setShowShareSheet] = useState(false);
 
     const handleLike = async () => {
         try {
@@ -94,6 +96,12 @@ const PostCard = ({ post, onLike, onComment }) => {
                     >
                         <MessageCircle className="w-7 h-7 text-gray-700" />
                     </button>
+                    <button
+                        onClick={() => setShowShareSheet(true)}
+                        className="hover:scale-110 transition-transform"
+                    >
+                        <Send className="w-7 h-7 text-gray-700" />
+                    </button>
                     <button className="hover:scale-110 transition-transform">
                         <Bookmark className="w-7 h-7 text-gray-700" />
                     </button>
@@ -156,6 +164,16 @@ const PostCard = ({ post, onLike, onComment }) => {
                     </button>
                 </form>
             </div>
+
+            <AnimatePresence>
+                {showShareSheet && (
+                    <ShareSheet
+                        item={post}
+                        type="post"
+                        onClose={() => setShowShareSheet(false)}
+                    />
+                )}
+            </AnimatePresence>
         </motion.div>
     );
 };

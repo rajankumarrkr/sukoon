@@ -53,14 +53,19 @@ exports.getFeed = async (req, res) => {
             return res.status(404).json({ message: 'User not found' });
         }
 
-        // Get posts from followed users and own posts
+        // Get official account ID to show its content to everyone
+        const officialUser = await User.findOne({ username: 'sukoon_official' });
+        const followingIds = [...user.following, req.userId];
+        if (officialUser) followingIds.push(officialUser._id);
+
+        // Get posts from followed users, own posts, and official account
         const posts = await Post.find({
-            userId: { $in: [...user.following, req.userId] }
+            userId: { $in: followingIds }
         })
             .populate('userId', 'username profilePic')
             .populate('comments.userId', 'username profilePic')
             .sort({ createdAt: -1 })
-            .limit(50);
+            .limit(100);
 
         res.json({ posts });
     } catch (error) {

@@ -44,7 +44,7 @@ exports.getReels = async (req, res) => {
         const reels = await Reel.find()
             .populate('userId', 'username profilePic')
             .sort({ createdAt: -1 })
-            .limit(20);
+            .limit(100);
 
         res.json({ reels });
     } catch (error) {

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
-import { Heart, MessageCircle, Share2, Music, UserPlus, Loader2, Plus } from 'lucide-react';
+import { Heart, MessageCircle, Send, Music, UserPlus, Loader2, Plus } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import ShareSheet from '../components/ShareSheet';
@@ -62,7 +62,7 @@ const ReelItem = ({ reel, isActive, onShare }) => {
                     onClick={() => onShare(reel)}
                     className="p-3 text-white transition-transform active:scale-95"
                 >
-                    <Share2 className="w-8 h-8" />
+                    <Send className="w-8 h-8" />
                 </button>
                 <div className="w-10 h-10 rounded-full border-2 border-white overflow-hidden animate-spin-slow shadow-lg">
                     <img src={reel.userId?.profilePic || 'https://via.placeholder.com/40'} alt="Music" className="w-full h-full object-cover" />
@@ -151,6 +151,12 @@ const Reels = () => {
                         <Plus className="w-12 h-12" />
                     </div>
                     <p className="font-bold text-lg">No peaceful reels yet</p>
+                    <button
+                        onClick={() => navigate('/create-reel')}
+                        className="btn-primary mt-4"
+                    >
+                        Create First Reel
+                    </button>
                 </div>
             )}
 
@@ -158,7 +164,8 @@ const Reels = () => {
             <AnimatePresence>
                 {sharingReel && (
                     <ShareSheet
-                        reel={sharingReel}
+                        item={sharingReel}
+                        type="reel"
                         onClose={() => setSharingReel(null)}
                     />
                 )}
