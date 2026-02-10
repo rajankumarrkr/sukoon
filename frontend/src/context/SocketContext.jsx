@@ -27,11 +27,12 @@ export const SocketProvider = ({ children }) => {
                 // Don't show toast if it's our own action (safeguard)
                 if (data.sender?._id === user.id) return;
 
+                const isMissedCall = data.type === 'missed_call';
                 const senderName = data.sender?.username || 'Someone';
-                const messageSnippet = data.text || 'sent you a message';
+                const messageSnippet = data.text || (isMissedCall ? 'Missed call' : 'sent you a message');
 
                 toast((t) => (
-                    <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} max-w-md w-full bg-white shadow-lg rounded-lg pointer-events-auto flex ring-1 ring-black ring-opacity-5`}>
+                    <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} max-w-md w-full bg-white shadow-lg rounded-lg pointer-events-auto flex ring-1 ring-black ring-opacity-5 ${isMissedCall ? 'border-l-4 border-red-500' : ''}`}>
                         <div className="flex-1 w-0 p-4">
                             <div className="flex items-start">
                                 <div className="flex-shrink-0 pt-0.5">
@@ -42,11 +43,11 @@ export const SocketProvider = ({ children }) => {
                                     />
                                 </div>
                                 <div className="ml-3 flex-1">
-                                    <p className="text-sm font-medium text-gray-900">
-                                        {senderName}
+                                    <p className={`text-sm font-bold ${isMissedCall ? 'text-red-600' : 'text-gray-900'}`}>
+                                        {isMissedCall ? 'Missed Call' : senderName}
                                     </p>
                                     <p className="mt-1 text-sm text-gray-500 truncate">
-                                        {messageSnippet}
+                                        {isMissedCall ? `You have a missed call from ${senderName}` : messageSnippet}
                                     </p>
                                 </div>
                             </div>
@@ -54,13 +55,13 @@ export const SocketProvider = ({ children }) => {
                         <div className="flex border-l border-gray-200">
                             <button
                                 onClick={() => toast.dismiss(t.id)}
-                                className="w-full border border-transparent rounded-none rounded-r-lg p-4 flex items-center justify-center text-sm font-medium text-primary-600 hover:text-primary-500 focus:outline-none"
+                                className={`w-full border border-transparent rounded-none rounded-r-lg p-4 flex items-center justify-center text-sm font-medium focus:outline-none ${isMissedCall ? 'text-red-600 hover:text-red-500' : 'text-primary-600 hover:text-primary-500'}`}
                             >
                                 Close
                             </button>
                         </div>
                     </div>
-                ), { duration: 4000, position: 'top-right' });
+                ), { duration: isMissedCall ? 6000 : 4000, position: 'top-right' });
             });
 
             setSocket(newSocket);

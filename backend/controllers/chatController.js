@@ -3,6 +3,34 @@ const Message = require('../models/Message');
 const User = require('../models/User');
 const Notification = require('../models/Notification');
 const { sendNotification } = require('../utils/socket');
+const cloudinary = require('../utils/cloudinary');
+const fs = require('fs');
+
+exports.uploadImage = async (req, res) => {
+    try {
+        const file = req.file;
+        if (!file) {
+            return res.status(400).json({ message: 'Image file is required' });
+        }
+
+        // Upload to Cloudinary
+        const result = await cloudinary.uploader.upload(file.path, {
+            folder: 'sukoon_chat',
+            transformation: [{ width: 1080, crop: 'limit' }]
+        });
+
+        // Remove file from local uploads folder
+        fs.unlinkSync(file.path);
+
+        res.json({ imageUrl: result.secure_url });
+    } catch (error) {
+        console.error('Chat image upload error:', error);
+        if (req.file && fs.existsSync(req.file.path)) {
+            fs.unlinkSync(req.file.path);
+        }
+        res.status(500).json({ message: 'Server error' });
+    }
+};
 
 exports.getConversations = async (req, res) => {
     try {
@@ -36,7 +64,7 @@ exports.getMessages = async (req, res) => {
 
 exports.sendMessage = async (req, res) => {
     try {
-        const { recipientId, text, postId, reelId } = req.body;
+        const { recipientId, text, postId, reelId, imageUrl } = req.body;
 
         let conversation = await Conversation.findOne({
             participants: { $all: [req.userId, recipientId] }
@@ -54,7 +82,8 @@ exports.sendMessage = async (req, res) => {
             sender: req.userId,
             text,
             postId,
-            reelId
+            reelId,
+            imageUrl
         });
 
         await message.save();
@@ -70,7 +99,7 @@ exports.sendMessage = async (req, res) => {
             recipient: recipientId,
             sender: req.userId,
             type: 'message',
-            text: text || (postId ? 'Shared a post' : 'Shared a reel')
+            text: text || (postId ? 'Shared a post' : reelId ? 'Shared a reel' : 'Shared an image')
         });
         await notification.save();
         await notification.populate('sender', 'username profilePic');

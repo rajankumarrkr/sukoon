@@ -4,8 +4,9 @@ import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import { useSocket } from '../context/SocketContext';
 import { useNotifications } from '../context/NotificationContext';
-import { Send, User as UserIcon, Loader2, ChevronLeft, Film, MessageCircle } from 'lucide-react';
+import { Send, User as UserIcon, Loader2, ChevronLeft, Film, MessageCircle, Paperclip, Image as ImageIcon, Video, Phone, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import CallWindow from '../components/CallWindow';
 
 const Chat = () => {
     const { user: currentUser, API_URL } = useAuth();
@@ -22,6 +23,11 @@ const Chat = () => {
     const [newMessage, setNewMessage] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [showChatWindow, setShowChatWindow] = useState(false);
+    const [imageFile, setImageFile] = useState(null);
+    const [imagePreview, setImagePreview] = useState(null);
+    const [isUploading, setIsUploading] = useState(false);
+    const [activeCall, setActiveCall] = useState(null);
+    const fileInputRef = useRef(null);
     const messagesEndRef = useRef(null);
 
     useEffect(() => {
@@ -71,8 +77,20 @@ const Chat = () => {
                 }
                 fetchConversations();
             });
+
+            socket.on('incoming_call', (data) => {
+                const otherUser = activeConversation?.participants?.find(p => p._id === data.from);
+                setActiveCall({
+                    ...data,
+                    isIncoming: true,
+                    otherUser: otherUser || { _id: data.from, name: data.name }
+                });
+            });
         }
-        return () => socket?.off('receive_message');
+        return () => {
+            socket?.off('receive_message');
+            socket?.off('incoming_call');
+        };
     }, [socket, activeConversation]);
 
     useEffect(() => {
@@ -105,16 +123,34 @@ const Chat = () => {
         }
     };
 
+    const handleImageSelect = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            setImageFile(file);
+            setImagePreview(URL.createObjectURL(file));
+        }
+    };
+
     const handleSendMessage = async (e) => {
         e.preventDefault();
-        if (!newMessage.trim() || !activeConversation) return;
+        if ((!newMessage.trim() && !imageFile) || !activeConversation) return;
 
         const recipient = activeConversation.participants.find(p => p._id !== currentUser.id);
+        setIsUploading(true);
 
         try {
+            let uploadedImageUrl = null;
+            if (imageFile) {
+                const formData = new FormData();
+                formData.append('image', imageFile);
+                const uploadResponse = await axios.post(`${API_URL}/chat/upload`, formData);
+                uploadedImageUrl = uploadResponse.data.imageUrl;
+            }
+
             const response = await axios.post(`${API_URL}/chat/send`, {
                 recipientId: recipient._id,
-                text: newMessage.trim()
+                text: newMessage.trim(),
+                imageUrl: uploadedImageUrl
             });
 
             const sentMessage = response.data.message;
@@ -122,6 +158,8 @@ const Chat = () => {
 
             setMessages(prev => [...prev, sentMessage]);
             setNewMessage('');
+            setImageFile(null);
+            setImagePreview(null);
 
             if (activeConversation.isTemp) {
                 const refreshedConvs = await fetchConversations();
@@ -137,7 +175,18 @@ const Chat = () => {
             if (!activeConversation.isTemp) fetchConversations();
         } catch (error) {
             console.error('Send message error:', error);
+        } finally {
+            setIsUploading(false);
         }
+    };
+
+    const initiateCall = (type) => {
+        const recipient = activeConversation.participants.find(p => p._id !== currentUser.id);
+        setActiveCall({
+            otherUser: recipient,
+            callType: type,
+            isIncoming: false
+        });
     };
 
     return (
@@ -211,6 +260,20 @@ const Chat = () => {
                                     <p className="text-[9px] md:text-[10px] text-green-500 font-bold mt-0.5 md:mt-1">Active now</p>
                                 </div>
                             </div>
+                            <div className="flex items-center space-x-1 md:space-x-2">
+                                <button
+                                    onClick={() => initiateCall('audio')}
+                                    className="p-2 hover:bg-gray-100 rounded-full text-gray-600 transition-colors"
+                                >
+                                    <Phone size={20} className="md:w-6 md:h-6" />
+                                </button>
+                                <button
+                                    onClick={() => initiateCall('video')}
+                                    className="p-2 hover:bg-gray-100 rounded-full text-gray-600 transition-colors"
+                                >
+                                    <Video size={20} className="md:w-6 md:h-6" />
+                                </button>
+                            </div>
                         </div>
 
                         {/* Messages Area */}
@@ -269,7 +332,19 @@ const Chat = () => {
                                                 </Link>
                                             )}
 
-                                            <p className="text-xs md:text-base leading-relaxed break-words">{msg.text}</p>
+                                            {/* Chat Image */}
+                                            {msg.imageUrl && (
+                                                <div className="mb-2 rounded-xl overflow-hidden bg-gray-100 border border-gray-100/10">
+                                                    <img
+                                                        src={msg.imageUrl}
+                                                        alt="Sent image"
+                                                        className="w-full max-h-72 object-cover cursor-pointer hover:opacity-95 transition-opacity"
+                                                        onClick={() => window.open(msg.imageUrl, '_blank')}
+                                                    />
+                                                </div>
+                                            )}
+
+                                            {msg.text && <p className="text-xs md:text-base leading-relaxed break-words">{msg.text}</p>}
                                             <p className={`text-[8px] md:text-[9px] mt-1 font-bold uppercase ${msg.sender === currentUser.id ? 'text-primary-100' : 'text-gray-400'}`}>
                                                 {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                             </p>
@@ -286,22 +361,63 @@ const Chat = () => {
                         </div>
 
                         {/* Input Area */}
-                        <form onSubmit={handleSendMessage} className="p-2 md:p-4 bg-white border-t border-gray-100 flex items-center space-x-2 md:space-x-3 flex-shrink-0 flex-nowrap overflow-hidden">
-                            <input
-                                type="text"
-                                value={newMessage}
-                                onChange={(e) => setNewMessage(e.target.value)}
-                                placeholder="Type a message..."
-                                className="flex-1 w-0 min-w-0 px-3 md:px-4 py-2 md:py-3 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-primary-100 outline-none text-sm md:text-base"
-                            />
-                            <button
-                                type="submit"
-                                disabled={!newMessage.trim()}
-                                className="flex-shrink-0 p-2.5 md:p-3.5 bg-primary-600 text-white rounded-2xl hover:bg-primary-700 disabled:opacity-50 transition-all active:scale-95 shadow-lg shadow-primary-200"
-                            >
-                                <Send className="w-5 h-5 md:w-6 md:h-6" />
-                            </button>
-                        </form>
+                        <div className="bg-white border-t border-gray-100">
+                            {/* Image Preview */}
+                            <AnimatePresence>
+                                {imagePreview && (
+                                    <motion.div
+                                        initial={{ height: 0, opacity: 0 }}
+                                        animate={{ height: 'auto', opacity: 1 }}
+                                        exit={{ height: 0, opacity: 0 }}
+                                        className="px-4 pt-4"
+                                    >
+                                        <div className="relative inline-block">
+                                            <img src={imagePreview} alt="Preview" className="w-20 h-20 md:w-24 md:h-24 object-cover rounded-xl border border-gray-200" />
+                                            <button
+                                                onClick={() => {
+                                                    setImageFile(null);
+                                                    setImagePreview(null);
+                                                }}
+                                                className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full shadow-lg hover:bg-red-600 transition-colors"
+                                            >
+                                                <X size={14} />
+                                            </button>
+                                        </div>
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+
+                            <form onSubmit={handleSendMessage} className="p-2 md:p-4 flex items-center space-x-2 md:space-x-3 flex-nowrap overflow-hidden">
+                                <input
+                                    type="file"
+                                    ref={fileInputRef}
+                                    onChange={handleImageSelect}
+                                    accept="image/*"
+                                    className="hidden"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => fileInputRef.current.click()}
+                                    className="p-2.5 md:p-3 text-gray-500 hover:bg-gray-100 rounded-2xl transition-colors"
+                                >
+                                    <ImageIcon className="w-5 h-5 md:w-6 md:h-6" />
+                                </button>
+                                <input
+                                    type="text"
+                                    value={newMessage}
+                                    onChange={(e) => setNewMessage(e.target.value)}
+                                    placeholder="Type a message..."
+                                    className="flex-1 w-0 min-w-0 px-3 md:px-4 py-2 md:py-3 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-primary-100 outline-none text-sm md:text-base"
+                                />
+                                <button
+                                    type="submit"
+                                    disabled={(!newMessage.trim() && !imageFile) || isUploading}
+                                    className="flex-shrink-0 p-2.5 md:p-3.5 bg-primary-600 text-white rounded-2xl hover:bg-primary-700 disabled:opacity-50 transition-all active:scale-95 shadow-lg shadow-primary-200"
+                                >
+                                    {isUploading ? <Loader2 className="w-5 h-5 md:w-6 md:h-6 animate-spin" /> : <Send className="w-5 h-5 md:w-6 md:h-6" />}
+                                </button>
+                            </form>
+                        </div>
                     </>
                 ) : (
                     <div className="flex-1 flex flex-col items-center justify-center text-gray-400 p-8 text-center min-h-0">
@@ -313,6 +429,25 @@ const Chat = () => {
                     </div>
                 )}
             </div>
+
+            {/* Call Window Portal */}
+            <AnimatePresence>
+                {activeCall && (
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.95 }}
+                        className="fixed inset-0 z-[100]"
+                    >
+                        <CallWindow
+                            activeCall={activeCall}
+                            currentUser={currentUser}
+                            socket={socket}
+                            onEndCall={() => setActiveCall(null)}
+                        />
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     );
 };

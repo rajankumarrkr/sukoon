@@ -14,8 +14,11 @@ const messageSchema = new mongoose.Schema({
     text: {
         type: String,
         required: function () {
-            return !this.postId && !this.reelId;
+            return !this.postId && !this.reelId && !this.imageUrl;
         }
+    },
+    imageUrl: {
+        type: String
     },
     postId: {
         type: mongoose.Schema.Types.ObjectId,
